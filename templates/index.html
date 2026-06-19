@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Startup Kanban Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css">
+    <style>
+        .kanban-col { min-height: 500px; padding: 15px; background-color: #f4f6fa; border-radius: 8px; border: 1px dashed #cbd5e1; }
+        .tarea-card { cursor: grab; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; }
+        .tarea-card:active { cursor: grabbing; opacity: 0.7; }
+        .nav-link { cursor: pointer; }
+        .acciones-tarjeta { position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; }
+        .btn-icono { background: none; border: none; cursor: pointer; font-size: 14px; opacity: 0.5; }
+        .btn-icono:hover { opacity: 1; }
+    </style>
+</head>
+<body class="theme-light">
+    <div class="page">
+        <header class="navbar navbar-expand-md navbar-dark bg-dark d-print-none">
+            <div class="container-xl">
+                <h1 class="navbar-brand text-white pe-3">🚀 StartupFlow</h1>
+                <div class="navbar-nav flex-row order-md-last">
+                    <a class="nav-link text-white me-3" onclick="mostrarSeccion('admin')">⚙️ Administración</a>
+                    <a class="nav-link text-white me-3" onclick="mostrarSeccion('tablero')">📋 Tablero Kanban</a>
+                    <a class="nav-link text-white" onclick="mostrarSeccion('historial')">📜 Historial</a>
+                </div>
+            </div>
+        </header>
+
+        <div class="page-wrapper">
+            <div class="page-body container-xl mt-4">
+
+                <div id="seccion-admin">
+                    <h2 class="page-title mb-4">Panel de Administración</h2>
+                    <div class="row row-cards">
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header"><h3 class="card-title">1. Nuevo Usuario</h3></div>
+                                <div class="card-body">
+                                    <form id="formUsuario">
+                                        <input type="text" id="nombreUsuario" class="form-control mb-3" placeholder="Nombre completo" required>
+                                        <button type="submit" class="btn btn-primary w-100">Registrar Usuario</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header"><h3 class="card-title">2. Nuevo Proyecto</h3></div>
+                                <div class="card-body">
+                                    <form id="formProyecto">
+                                        <input type="text" id="nombreProyecto" class="form-control mb-3" placeholder="Nombre del proyecto" required>
+                                        <button type="submit" class="btn btn-primary w-100">Registrar Proyecto</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header"><h3 class="card-title">3. Asignar Tarea</h3></div>
+                                <div class="card-body">
+                                    <form id="formTarea">
+                                        <input type="text" id="tituloTarea" class="form-control mb-2" placeholder="Título de la tarea" required>
+                                        <select id="selectProyecto" class="form-select mb-2" required><option value="">Proyecto...</option></select>
+                                        <select id="selectUsuario" class="form-select mb-2" required><option value="">Responsable...</option></select>
+                                        <label class="form-label small">Fecha de vencimiento:</label>
+                                        <input type="date" id="fechaVencimiento" class="form-control mb-3" required>
+                                        <button type="submit" class="btn btn-success w-100">Crear Tarea</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="seccion-tablero" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="page-title">Tablero del Proyecto</h2>
+                        <select id="filtroProyecto" class="form-select w-auto" onchange="cargarTablero()">
+                            <option value="">Selecciona un proyecto para ver sus tareas...</option>
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-3">
+                            <h3 class="text-center text-secondary mb-3">Pendiente</h3>
+                            <div class="kanban-col" id="Pendiente" ondragover="permitirDrop(event)" ondrop="soltar(event, 'Pendiente')"></div>
+                        </div>
+                        <div class="col-3">
+                            <h3 class="text-center text-primary mb-3">En Proceso</h3>
+                            <div class="kanban-col" id="En Proceso" ondragover="permitirDrop(event)" ondrop="soltar(event, 'En Proceso')"></div>
+                        </div>
+                        <div class="col-3">
+                            <h3 class="text-center text-warning mb-3">En Revisión</h3>
+                            <div class="kanban-col" id="En Revisión" ondragover="permitirDrop(event)" ondrop="soltar(event, 'En Revisión')"></div>
+                        </div>
+                        <div class="col-3">
+                            <h3 class="text-center text-success mb-3">Finalizado</h3>
+                            <div class="kanban-col" id="Finalizado" ondragover="permitirDrop(event)" ondrop="soltar(event, 'Finalizado')"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="seccion-historial" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="page-title">Historial de Actividades</h2>
+                        <select id="filtroProyectoHistorial" class="form-select w-auto" onchange="paginaActualHistorial = 1; cargarTablaHistorial()">
+                            <option value="">Selecciona un proyecto para ver su historial...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="table-responsive">
+                            <table class="table table-vcenter card-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha y Hora</th>
+                                        <th>Tarea Afectada</th>
+                                        <th>Acción Realizada</th>
+                                        <th>Detalle del Cambio</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpoTablaHistorial"></tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer d-flex align-items-center justify-content-between">
+                            <p class="m-0 text-muted" id="infoPaginacion">Mostrando página 1</p>
+                            <ul class="pagination m-0 ms-auto">
+                                <li class="page-item"><button class="page-link" onclick="cambiarPagina(-1)">Anterior</button></li>
+                                <li class="page-item"><button class="page-link" onclick="cambiarPagina(1)">Siguiente</button></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let paginaActualHistorial = 1;
+        let totalPaginasHistorial = 1;
+
+        // 1. Navegación
+        function mostrarSeccion(seccion) {
+            document.getElementById('seccion-admin').style.display = seccion === 'admin' ? 'block' : 'none';
+            document.getElementById('seccion-tablero').style.display = seccion === 'tablero' ? 'block' : 'none';
+            document.getElementById('seccion-historial').style.display = seccion === 'historial' ? 'block' : 'none';
+            
+            if (seccion === 'tablero') cargarFiltrosGenerales('filtroProyecto', cargarTablero);
+            if (seccion === 'historial') cargarFiltrosGenerales('filtroProyectoHistorial', cargarTablaHistorial);
+        }
+
+        // 2. Cargar datos en formularios
+        async function cargarFormularios() {
+            const resUsr = await fetch('/api/usuarios');
+            const usuarios = await resUsr.json();
+            const selUsr = document.getElementById('selectUsuario');
+            selUsr.innerHTML = '<option value="">Asignar a...</option>';
+            usuarios.forEach(u => selUsr.innerHTML += `<option value="${u.nombre}">${u.nombre}</option>`);
+
+            const resProy = await fetch('/api/proyectos');
+            const proyectos = await resProy.json();
+            const selProy = document.getElementById('selectProyecto');
+            selProy.innerHTML = '<option value="">Selecciona Proyecto...</option>';
+            proyectos.forEach(p => selProy.innerHTML += `<option value="${p.nombre}">${p.nombre}</option>`);
+        }
+
+        async function cargarFiltrosGenerales(idSelect, callback) {
+            const resProy = await fetch('/api/proyectos');
+            const proyectos = await resProy.json();
+            const filtro = document.getElementById(idSelect);
+            const actual = filtro.value; 
+            filtro.innerHTML = '<option value="">Selecciona un proyecto...</option>';
+            proyectos.forEach(p => filtro.innerHTML += `<option value="${p.nombre}">${p.nombre}</option>`);
+            if(actual) filtro.value = actual;
+            callback();
+        }
+
+        // 3. Renderizar Tablero Kanban
+        async function cargarTablero() {
+            const proyectoNombre = document.getElementById('filtroProyecto').value;
+            document.querySelectorAll('.kanban-col').forEach(col => col.innerHTML = '');
+            if(!proyectoNombre) return;
+
+            const res = await fetch(`/api/tareas?proyecto=${encodeURIComponent(proyectoNombre)}`);
+            const tareas = await res.json();
+            const fechaHoy = new Date().toISOString().split('T')[0];
+            
+            tareas.forEach(t => {
+                let bordeRojo = "";
+                let msjAtraso = "";
+                if (t.fecha_vencimiento && t.fecha_vencimiento < fechaHoy && t.estado !== 'Finalizado') {
+                    bordeRojo = "border-danger border-2";
+                    msjAtraso = `<span class="badge bg-danger text-white ms-1">Atrasada</span>`;
+                }
+
+                const tarjeta = `
+                    <div class="card tarea-card ${bordeRojo}" draggable="true" ondragstart="arrastrar(event, '${t._id}')" id="${t._id}">
+                        <div class="acciones-tarjeta" style="z-index: 10;">
+                            <button class="btn-icono" 
+                                onmousedown="event.stopPropagation()" 
+                                onclick="event.stopPropagation(); editarTarea('${t._id}', '${t.titulo}')">
+                                ✏️
+                            </button>
+                            <button class="btn-icono text-danger" 
+                                onmousedown="event.stopPropagation()" 
+                                onclick="event.stopPropagation(); eliminarTarea('${t._id}')">
+                                🗑️
+                            </button>
+                        </div>
+                        <div class="card-body p-3">
+                            <h4 class="card-title mb-2 pe-4">${t.titulo} ${msjAtraso}</h4>
+                            <div class="text-muted small">👤 <strong>${t.usuario}</strong></div>
+                            <div class="text-muted small mt-1">📅 Vence: ${t.fecha_vencimiento || 'N/A'}</div>
+                        </div>
+                    </div>`;
+                const columna = document.getElementById(t.estado);
+                if(columna) columna.innerHTML += tarjeta;
+            });
+        }
+
+        // 4. Acciones CRUD Tareas
+        async function editarTarea(idTarea, tituloActual) {
+            const nuevoTitulo = prompt("Editar título de la tarea:", tituloActual);
+            if (nuevoTitulo && nuevoTitulo !== tituloActual) {
+                await fetch(`/api/tareas/${idTarea}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ titulo: nuevoTitulo })
+                });
+                cargarTablero();
+            }
+        }
+
+        async function eliminarTarea(idTarea) {
+            if (confirm("¿Estás seguro de eliminar esta tarea? Esta acción no se puede deshacer.")) {
+                await fetch(`/api/tareas/${idTarea}`, { method: 'DELETE' });
+                cargarTablero();
+            }
+        }
+
+        // 5. Historial Paginado
+        async function cargarTablaHistorial() {
+            const proyectoNombre = document.getElementById('filtroProyectoHistorial').value;
+            const tabla = document.getElementById('cuerpoTablaHistorial');
+            tabla.innerHTML = '';
+            if(!proyectoNombre) return;
+
+            const res = await fetch(`/api/historial?proyecto=${encodeURIComponent(proyectoNombre)}&page=${paginaActualHistorial}&limit=5`);
+            const data = await res.json();
+            
+            totalPaginasHistorial = data.total_paginas;
+            document.getElementById('infoPaginacion').innerText = `Página ${data.pagina_actual} de ${data.total_paginas || 1}`;
+
+            data.datos.forEach(log => {
+                let colorBadge = log.accion.includes("Creación") ? "bg-green" : (log.accion.includes("Elimina") ? "bg-red" : "bg-blue");
+                tabla.innerHTML += `
+                    <tr>
+                        <td class="text-muted">${log.fecha || ''}</td>
+                        <td><strong>${log.tarea_titulo || 'N/A'}</strong></td>
+                        <td><span class="badge ${colorBadge}">${log.accion}</span></td>
+                        <td class="text-muted">${log.detalle || ''}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function cambiarPagina(direccion) {
+            const nuevaPagina = paginaActualHistorial + direccion;
+            if (nuevaPagina >= 1 && nuevaPagina <= totalPaginasHistorial) {
+                paginaActualHistorial = nuevaPagina;
+                cargarTablaHistorial();
+            }
+        }
+
+        // 6. Drag & Drop
+        function arrastrar(ev, idTarea) { ev.dataTransfer.setData("id_tarea", idTarea); }
+        function permitirDrop(ev) { ev.preventDefault(); }
+        async function soltar(ev, nuevoEstado) {
+            ev.preventDefault();
+            const idTarea = ev.dataTransfer.getData("id_tarea");
+            await fetch(`/api/tareas/${idTarea}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ estado: nuevoEstado })
+            });
+            cargarTablero(); 
+        }
+
+        // 7. Eventos de Formularios
+        document.getElementById('formUsuario').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await fetch('/api/usuarios', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ nombre: document.getElementById('nombreUsuario').value }) });
+            document.getElementById('formUsuario').reset();
+            cargarFormularios();
+            alert('Usuario registrado');
+        });
+
+        document.getElementById('formProyecto').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await fetch('/api/proyectos', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ nombre: document.getElementById('nombreProyecto').value }) });
+            document.getElementById('formProyecto').reset();
+            cargarFormularios();
+            alert('Proyecto registrado');
+        });
+
+        document.getElementById('formTarea').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const selProy = document.getElementById('selectProyecto');
+            const selUsr = document.getElementById('selectUsuario');
+            await fetch('/api/tareas', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ 
+                    titulo: document.getElementById('tituloTarea').value,
+                    proyecto: selProy.options[selProy.selectedIndex].value,
+                    usuario: selUsr.options[selUsr.selectedIndex].value,
+                    fecha_vencimiento: document.getElementById('fechaVencimiento').value
+                }) 
+            });
+            document.getElementById('formTarea').reset();
+            alert('Tarea asignada exitosamente');
+        });
+
+        // Iniciar
+        cargarFormularios();
+    </script>
+</body>
+</html>
